@@ -10,10 +10,10 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     permissions:
-      contents: write # to be able to publish a GitHub release
-      issues: write # to be able to comment on released issues
-      pull-requests: write # to be able to comment on released pull requests
-      id-token: write # to enable use of OIDC for npm provenance
+      contents: write # publish GitHub release
+      issues: write   # comment on released issues
+      pull-requests: write # comment on released PRs
+      id-token: write # npm provenance
 
     steps:
       - name: Checkout
@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm clean-install
 
-      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+      - name: Verify signatures
         run: npm audit signatures
 
       - name: Run Semantic Release
@@ -37,3 +37,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      # ⬇️ Add this block ⬇️
+      - name: Replace release body with GitHub-generated notes (adds Contributors)
+        if: ${{ steps.semantic.outputs.new_release_published == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.semantic.outputs.new_release_git_tag }}
+          PREV_TAG: ${{ steps.semantic.outputs.last_release_git_tag }}
+        run: |
+          # Get the official GitHub-generated notes (includes contributors)
+          gh api repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="$TAG" \
+            -f previous_tag_name="$PREV_TAG" \
+            --jq '.body' > NOTES.md
+
+          # Update the release body with those notes
+          gh release edit "$TAG" --notes-file NOTES.md

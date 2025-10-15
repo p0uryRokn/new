@@ -1,14 +1,54 @@
 {
+  "branches": ["main"],
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "breaking": true, "release": "major" },
+          { "type": "feat", "release": "minor" },
+          { "type": "fix", "release": "patch" },
+          { "type": "chore", "release": "patch" },
+          { "type": "test", "release": "patch" },
+          { "type": "refactor", "release": "patch" },
+          { "type": "docs", "release": "patch" },
+          { "type": "style", "release": "patch" },
+          { "type": "build", "release": "patch" },
+          { "type": "ci", "release": "patch" }
+        ],
+        "parserOpts": {
+          "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        }
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "writerOpts": {
+          "footerPartial": "\n\n[Full Changelog](https://github.com/owner/repo/compare/{{previousTag}}...{{currentTag}})"
+        },
+        "presetConfig": {
+          "types": [
+            { "type": "feat", "section": "Features" },
+            { "type": "fix", "section": "Bug Fixes" },
+            { "type": "chore", "section": "Chores" },
+            { "type": "test", "section": "Tests" },
+            { "type": "docs", "section": "Documentation" },
+            { "type": "refactor", "section": "Refactoring" },
+            { "type": "style", "section": "Style" },
+            { "type": "build", "section": "Build System" },
+            { "type": "ci", "section": "Continuous Integration" }
+          ]
+        }
+      }
+    ],
     [
       "@semantic-release/github",
       {
-        "assets": [
-          { "path": "dist/asset.min.css", "label": "CSS distribution" },
-          { "path": "dist/asset.min.js", "label": "JS distribution" }
-        ]
+        "draftRelease": true,
+        "releaseBodyTemplate": "<%= nextRelease.notes %><% if (lastRelease && lastRelease.gitTag) { %>\n\n[Full Changelog](../../compare/<%= lastRelease.gitTag %>...<%= nextRelease.gitTag %>)<% } %><%\n  const seen = new Set();\n  const isBot = (id) => /\\[bot\\]$/i.test(id || '') || /(^|-)bot($|-)/i.test(id || '');\n  const contributors = [];\n  (commits || []).forEach(c => {\n    const a = c.author || {};\n    const login = (a.login || a.username || '').trim();\n    const name = (a.name || '').trim() || ((a.email || '').split('@')[0] || '').trim();\n    const key = (login || name || '').toLowerCase();\n    if (!key || isBot(key) || seen.has(key)) return;\n    seen.add(key);\n    contributors.push(login ? '@' + login : name);\n  });\n%><% if (contributors.length) { %>\n\n### Contributors\n<% contributors.forEach(u => { %>- <%= u %>\n<% }) %><% } %>"
       }
     ]
   ]
